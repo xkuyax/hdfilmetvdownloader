@@ -44,9 +44,8 @@ import java.util.Set;
 @Data
 public class Login {
 
-    private static final Type COOKIE_TYPE = new TypeToken<ArrayList<BasicClientCookie2>>() {
-    }.getType();
-    public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0";
+    private static final Type COOKIE_TYPE = new TypeToken<ArrayList<BasicClientCookie2>>() {}.getType();
+    public static String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0";
     private final int WEB_CRAWLER = BootstrapDownloader.WEB_CRAWLER;
     private static final boolean VERIFY_WEB = true;
     private CloseableHttpClient httpClient;
@@ -55,11 +54,20 @@ public class Login {
     private final String title;
 
     public CloseableHttpClient run() throws Exception {
+        loadExistingUserAgent();
         setupClient();
         if (loadExisting()) {
             fuckCloudflare();
         }
         return httpClient;
+    }
+
+    private void loadExistingUserAgent() throws IOException {
+        Path userAgentPath = Paths.get("useragent.txt");
+        if (Files.exists(userAgentPath)) {
+            USER_AGENT = new String(Files.readAllBytes(userAgentPath));
+            System.out.println("Loaded user agent " + USER_AGENT + " from config");
+        }
     }
 
     //cookie cache
@@ -90,21 +98,13 @@ public class Login {
         builder.loadTrustMaterial(null, (TrustStrategy) (chain, authType) -> true);
         SSLContext sslContext = builder.build();
         SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext, SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
-        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create().register("https", sslsf)
-                .register("http", new PlainConnectionSocketFactory())
-                .build();
+        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create().register("https", sslsf).register("http", new PlainConnectionSocketFactory()).build();
         //my code
         PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
         cm.setMaxTotal(WEB_CRAWLER);
         cm.setDefaultMaxPerRoute(WEB_CRAWLER);
         CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        this.httpClient = HttpClientBuilder.create()
-                .setDefaultCredentialsProvider(credentialsProvider)
-                .setSSLSocketFactory(sslsf)
-                .setDefaultCookieStore(cookies)
-                .setConnectionManager(cm)
-                .setUserAgent(USER_AGENT)
-                .build();
+        this.httpClient = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).setSSLSocketFactory(sslsf).setDefaultCookieStore(cookies).setConnectionManager(cm).setUserAgent(USER_AGENT).build();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("username", "password"));
     }
 
@@ -112,6 +112,7 @@ public class Login {
         System.out.println("trying to fuck cloud flare");
         System.getProperties().put("webdriver.gecko.driver", Paths.get("geckodriver.exe").toAbsolutePath().toString());
         FirefoxDriver webDriver = new FirefoxDriver();
+        USER_AGENT = (String) webDriver.executeScript("return navigator.userAgent", "");
         webDriver.get(url);
         Wait<WebDriver> wait = new WebDriverWait(webDriver, 30);
         wait.until(input -> input != null && input.getTitle().toLowerCase().contains(title));
@@ -127,7 +128,9 @@ public class Login {
         });
         //cookie cache
         Files.write(Paths.get("cookies.txt"), new Gson().toJson(cookies.getCookies(), COOKIE_TYPE).getBytes());
+        Files.write(Paths.get("useragent.txt"), USER_AGENT.getBytes());
         System.out.println("Got cookies and successfully fucked cloudflare :)");
+        System.out.println("Saved user agent " + USER_AGENT + " to config");
         webDriver.close();
         webDriver.kill();
         System.out.println("Closed firefox");

@@ -7,7 +7,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
@@ -33,13 +32,19 @@ public class BootstrapDownloader {
                     List<VideoDownloadLink> downloadLinks = new HDFilmeDownloader(downloadHandler, url, "films/" + file + ".html")
                             .download();
                     filmInfo.setVideoDownloadLinks(downloadLinks);
+                    downloadHandler.handleDownloadSilent(filmInfo.getImageUrl(), "pics/" + file + ".jpg");
                 } catch (Exception e) {
-                    e.printStackTrace();
+//                    e.printStackTrace();
                 }
             });
         }).get();
         Gson gson = new Gson();
-        Files.write(Paths.get("out.json"), gson.toJson(Arrays.asList(filmInfos.get(0))).getBytes());
+        Files.write(Paths.get("out.json"), gson.toJson((filmInfos)).getBytes());
         System.out.println("FINISHED");
+        filmInfos.forEach(filmInfo -> {
+            if (filmInfo.getVideoDownloadLinks().size() > 0) {
+                System.out.println(filmInfo.getVideoDownloadLinks().get(0).getUrl());
+            }
+        });
     }
 }

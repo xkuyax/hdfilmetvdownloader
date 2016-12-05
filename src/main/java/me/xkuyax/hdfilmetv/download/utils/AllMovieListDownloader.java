@@ -25,7 +25,6 @@ public class AllMovieListDownloader {
         List<FilmInfo> films = new ArrayList<>();
         FilmSiteInfo siteInfo = downloadSite(50);
         System.out.println(siteInfo);
-        //1920*1080^255^3
         new ForkJoinPool(16).submit(() -> {
             IntStream.range(siteInfo.getCurrentSite(), siteInfo.getMaxSite() + 1).parallel().forEach(site -> {
                 try {
@@ -36,8 +35,6 @@ public class AllMovieListDownloader {
                 }
             });
         }).get();
-        System.out.println(films.size());
-        System.out.println(films.get(0).getUrl());
         return films;
     }
 

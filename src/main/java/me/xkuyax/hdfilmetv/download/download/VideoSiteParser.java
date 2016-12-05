@@ -21,6 +21,7 @@ public class VideoSiteParser {
         Elements element = document.select(".box-product.clearfix");
         for (Element filmInfo : element) {
             String url = filmInfo.select("div.box-product.clearfix > a").attr("href");
+            System.out.println(parseId(url));
             String img = filmInfo.select("img").attr("src");
             String title = filmInfo.select(".title-product").text();
             String desc = filmInfo.select(".popover-content p").first().text();
@@ -36,4 +37,11 @@ public class VideoSiteParser {
         }
         return film;
     }
+
+    private String parseId(String url) {
+        String[] split = url.split("-");
+        String id = split[split.length - 2];
+        return id;
+    }
+
 }
